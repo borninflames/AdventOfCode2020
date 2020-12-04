@@ -18,7 +18,7 @@ Future<int> readInputFile(String path) async {
       }
     } else {
       print('${currentId}');
-      validIdsCount += isValidID(currentId) ? 1 : 0;
+      validIdsCount += isValidIDv2(currentId) ? 1 : 0;
       currentId = {};
     }
   }, onDone: () {
@@ -47,13 +47,43 @@ bool isValidID(Map<String, String> id) {
       id['pid'].isNotEmpty;
 }
 
-class IdentityCard {
-  String byr; // (Birth Year)
-  String iyr; // (Issue Year)
-  String eyr; // (Expiration Year)
-  String hgt; // (Height)
-  String hcl; // (Hair Color)
-  String ecl; // (Eye Color)
-  String pid; // (Passport ID)
-  String cid; // (Country ID)
+bool isValidIDv2(Map<String, String> id) {
+  return hasProp(id, 'byr') &&
+      int.parse(id['byr']) >= 1920 &&
+      int.parse(id['byr']) <= 2002 &&
+      hasProp(id, 'iyr') &&
+      int.parse(id['iyr']) >= 2010 &&
+      int.parse(id['iyr']) <= 2020 &&
+      hasProp(id, 'eyr') &&
+      int.parse(id['eyr']) >= 2020 &&
+      int.parse(id['eyr']) <= 2030 &&
+      hasProp(id, 'hgt') &&
+      isValidHeight(id['hgt']) &&
+      hasProp(id, 'hcl') &&
+      RegExp(r'^#[0-9a-f]{6}$').hasMatch(id['hcl']) &&
+      hasProp(id, 'ecl') &&
+      RegExp(r'^(amb|blu|brn|gry|grn|hzl|oth)$').hasMatch(id['ecl']) &&
+      hasProp(id, 'pid') &&
+      RegExp(r'^[0-9]{9}$').hasMatch(id['pid']);
+}
+
+bool hasProp(Map<String, String> id, String key) {
+  return id.containsKey(key) && id[key].isNotEmpty;
+}
+
+bool isValidHeight(String height) {
+  var hStr = height.substring(0, height.length - 2);
+  var h = int.tryParse(hStr);
+  if (h == null) {
+    return false;
+  }
+
+  if (height.endsWith('in')) {
+    return h >= 59 && h <= 76;
+  }
+  if (height.endsWith('cm')) {
+    return h >= 150 && h <= 193;
+  }
+
+  return false;
 }
