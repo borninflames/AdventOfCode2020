@@ -14,15 +14,12 @@ Future<List<Bag>> readInputFile(String path) async {
     bags.add(Bag(line));
   }, onDone: () {
     countTheShinyShit(bags); //part 1
-
     var theShinyShit = bags.where((el) => el.colour == THE_SHINY_SHIT).first;
     print(countTheShit(theShinyShit, bags)); //part2
-
     completer.complete(bags);
   }, onError: (e) {
     print(e.toString());
   });
-
   return completer.future;
 }
 
@@ -37,13 +34,11 @@ bool canContainTheShinyShit(Bag bag, List<Bag> bags) {
     if (bag.bags.any((b) => b.colour == THE_SHINY_SHIT)) {
       return true;
     }
-
     if (bag.bags.any((b) => canContainTheShinyShit(
         bags.where((el) => el.colour == b.colour).first, bags))) {
       return true;
     }
   }
-
   return false;
 }
 
@@ -56,9 +51,7 @@ int countTheShit(Bag bag, List<Bag> bags) {
               countTheShit(
                   bags.where((el) => el.colour == b.colour).first, bags));
     });
-    return cunt;
   }
-
   return cunt;
 }
 
@@ -66,18 +59,15 @@ class Bag {
   String colour;
   int amount;
   List<Bag> bags;
-
   Bag._(this.colour, this.amount, List<Bag> bags) {
     this.bags = bags;
   }
-
   Bag(String line) {
     line = line.substring(0, line.length - 1);
     var parts = line.split(' contain ');
     bags = <Bag>[];
     if (parts[1] != 'no other bags') {
       var bagsParts = parts[1].split(', ');
-
       for (var i = 0; i < bagsParts.length; i++) {
         var am = int.tryParse(bagsParts[i][0]);
         var col = bagsParts[i].substring(2, bagsParts[i].length);
