@@ -28,60 +28,69 @@ class SeaportComputer {
     var instrParts = instruction.split(' = ');
     if (instrParts[0] == 'mask') {
       mask = instruction.split(' = ')[1];
+      print(
+          'New mask---------------------------------------------------------------------------');
     } else {
       var regex = RegExp(r'\[(\d+)\]');
       var match = regex.firstMatch(instrParts[0]);
       if (match != null) {
         var value = int.parse(instrParts[1]);
         var nextAddr = getMaskedAddress(match.group(1));
+        print('Raw address:    ${match.group(1)}');
+        print('Masked address: ${nextAddr}');
 
         var memAddresses = mem.keys.toList();
         //végigmegyek a már meglévő memória címeken
         memAddresses.forEach((addr) {
           //distinct
           if (!areDistinct(addr, nextAddr)) {
-            if (isLargerSet(addr, nextAddr)) {
+            print('Are they equal: ${addr == nextAddr}');
+            //csökkentjük az eredeti halmazt, az újat is, hogy distinctek legyenek
+            if (addr != nextAddr) {
+              var shrinkedAddr = separate(addr, nextAddr);
+              mem[shrinkedAddr] = mem[addr];
               mem.remove(addr);
-            } else {
-              //csökkentjük az eredeti halmazt, az újat is, hogy distinctek legyenek
-              var addresses = separate(addr, nextAddr);
-              mem[addresses[0]] = mem[addr];
-              mem.remove(addr);
-              nextAddr = addresses[1];
             }
           }
         });
 
         mem[nextAddr] = value;
+        print(
+            '--------------------------------------------------------------------------------------------');
       }
     }
   }
 
-  List<String> separate(String addr, String nextAddr) {
-    var addresses = ['', ''];
+  String separate(String addr, String nextAddr) {
+    var shrinkedAddr = '';
     for (var i = 0; i < addr.length; i++) {
       if (addr[i] == nextAddr[i]) {
-        addresses[0] += addr[i];
-        addresses[1] += addr[i];
+        shrinkedAddr += addr[i];
       } else if (addr[i] == 'X' && nextAddr[i] != 'X') {
-        addresses[0] += nextAddr[i] == '1' ? '0' : '1';
-        addresses[1] += nextAddr[i];
+        shrinkedAddr += nextAddr[i] == '1' ? '0' : '1';
       } else if (addr[i] != 'X' && nextAddr[i] == 'X') {
-        addresses[0] += addr[i];
-        addresses[1] += nextAddr[i];
+        shrinkedAddr += addr[i];
       }
     }
-    return addresses;
+
+    print('${addr} was shrinked to be distinct from: ${nextAddr}');
+    print('${shrinkedAddr}');
+    return shrinkedAddr;
   }
 
   bool isLargerSet(String addr, String nextAddr) {
+    if (addr == nextAddr) {
+      return true;
+    }
     var chars = addr.split('');
     var retVal = true;
     for (var i = 0; i < chars.length && retVal; i++) {
       if (chars[i] == 'X' && nextAddr[i] != 'X') {
         retVal = false;
+        print('isLargerSet: ${retVal} [${i}]');
       }
     }
+
     return retVal;
   }
 
@@ -91,6 +100,11 @@ class SeaportComputer {
       retVal = addr[i] == '1' && nextAddr[i] == '0' ||
           addr[i] == '0' && nextAddr[i] == '1';
     }
+    if (!retVal) {
+      print('Not distinct: ${addr}');
+      print('With this:    ${nextAddr}');
+    }
+
     return retVal;
   }
 
@@ -103,8 +117,8 @@ class SeaportComputer {
   }
 
   int sumMemory2() {
-    print(mem);
     var sum = 0;
+    print('There are ${mem.length} values');
     mem.forEach((key, value) {
       var exponent = 'X'.allMatches(key).length;
       var a = pow(2, exponent);
