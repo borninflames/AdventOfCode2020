@@ -11,7 +11,7 @@ Future<int> readInputFile(String path) async {
 
   inputStream.transform(utf8.decoder).transform(LineSplitter()).listen(
       (String line) {
-    print(line);
+    //print(line);
     if (line == '') {
       section++;
     } else {
@@ -28,7 +28,8 @@ Future<int> readInputFile(String path) async {
       }
     }
   }, onDone: () {
-    completer.complete(shit.part1());
+    print('Part 1 answer is: ${shit.part1()}');
+    completer.complete(shit.part2());
   }, onError: (e) {
     print(e.toString());
   });
@@ -39,6 +40,50 @@ class Shit {
   var rules = <List<int>>[];
   var myTicket = <int>[];
   var tickets = <List<int>>[];
+
+  int part2() {
+    tickets = getValidTickets();
+    print('Valid tickets: ${tickets.length}');
+
+    var ruleOrder = <int, List<int>>{};
+
+    for (var r = 0; r < rules.length; r++) {
+      for (var ti = 0; ti < tickets[0].length; ti++) {
+        var col = tickets.map((t) => t[ti]).toList(growable: false);
+
+        if (col.every((n) => rules[r].any((rn) => rn == n))) {
+          if (ruleOrder[r] == null) {
+            ruleOrder[r] = <int>[];
+          }
+          ruleOrder[r].add(ti);
+        }
+      }
+    }
+
+    while (ruleOrder.entries.any((e) => e.value.length != 1)) {
+      ruleOrder.forEach((key, value) {
+        if (ruleOrder[key].length == 1) {
+          ruleOrder.entries.forEach((e) {
+            if (e.key != key) {
+              e.value.remove(ruleOrder[key].first);
+            }
+          });
+        }
+      });
+    }
+
+    ruleOrder.forEach((key, value) {
+      print('Rule[${key}] appliable on these columns ${value}');
+    });
+
+    var sum = 1;
+
+    for (var i = 0; i < 6; i++) {
+      sum *= myTicket[ruleOrder[i].first];
+    }
+
+    return sum;
+  }
 
   int part1() {
     var allRules = rules.expand((element) => element).toList();
@@ -52,22 +97,24 @@ class Shit {
     return sumOfInvalidNumbers;
   }
 
-  // int getInvalidNumbersSum(List<int> ticket) {
-  //   var allRules = rules.expand((element) => element).toList();
-  //   var sumOfInvalidNumbers = 0;
-  //   ticket.forEach((n) {
-  //     if (allRules.every((rn) => rn != n)) {}
-  //   });
-  // }
+  bool isValid(List<int> ticket) {
+    var allRules = rules.expand((element) => element).toList();
+    return !ticket.any((tn) => allRules.every((rn) => rn != tn));
+  }
+
+  List<List<int>> getValidTickets() {
+    return tickets.where((ticket) => isValid(ticket)).toList();
+  }
 
   void addRule(String line) {
     var ruleParts = line.split(': ');
     var ranges = ruleParts[1].split(' or ');
     var minMax = ranges[0].split('-').map((i) => int.parse(i)).toList();
-    rules.add(List<int>.generate(minMax[1] - minMax[0], (i) => i + minMax[0]));
+    rules.add(
+        List<int>.generate(minMax[1] - minMax[0] + 1, (i) => i + minMax[0]));
     minMax = ranges[1].split('-').map((i) => int.parse(i)).toList();
     rules.last.addAll(
-        List<int>.generate(minMax[1] - minMax[0], (i) => i + minMax[0]));
+        List<int>.generate(minMax[1] - minMax[0] + 1, (i) => i + minMax[0]));
   }
 
   void addMyTicket(String line) {
