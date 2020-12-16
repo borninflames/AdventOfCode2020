@@ -77,11 +77,9 @@ class Shit {
     });
 
     var sum = 1;
-
     for (var i = 0; i < 6; i++) {
       sum *= myTicket[ruleOrder[i].first];
     }
-
     return sum;
   }
 
