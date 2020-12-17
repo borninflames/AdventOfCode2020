@@ -60,6 +60,12 @@ class Shit {
       }
     }
 
+    ruleOrder.forEach((key, value) {
+      print('Rule[${key}] appliable on these columns ${value}');
+    });
+
+    print('----');
+
     while (ruleOrder.entries.any((e) => e.value.length != 1)) {
       ruleOrder.forEach((key, value) {
         if (ruleOrder[key].length == 1) {
