@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "aoc2020_17",
+            "name": "aoc2020_18",
             "request": "launch",
             "program": "bin/main.dart",
             "type": "dart"
