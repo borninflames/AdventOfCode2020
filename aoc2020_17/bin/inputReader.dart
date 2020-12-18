@@ -7,7 +7,7 @@ Future<int> readInputFile(String path) async {
   final completer = Completer<int>();
   var inputStream = file.openRead();
   var fuck = Fuck();
-  fuck.initCubes(6);
+  fuck.initCubes(10);
   var y = 0;
 
   inputStream.transform(utf8.decoder).transform(LineSplitter()).listen(
@@ -15,6 +15,7 @@ Future<int> readInputFile(String path) async {
     fuck.addRow(line, y);
     y++;
   }, onDone: () {
+    fuck.printZLayer(0, 0);
     fuck.doCircles(6);
     completer.complete(fuck.getActiveCubes());
   }, onError: (e) {
@@ -25,14 +26,15 @@ Future<int> readInputFile(String path) async {
 
 class Fuck {
   var cubes = <Cube>[];
-  var xRange = [0, 2];
-  var yRange = [0, 2];
+  var xRange = [0, 7];
+  var yRange = [0, 7];
   var zRange = [0, 0];
+  var wRange = [0, 0];
 
   void doCircles(int times) {
     for (var i = 0; i < times; i++) {
       doCircle();
-      printZLayer(0);
+      //printZLayer(0, 0);
       print('-- finished ${i + 1}. circle --');
     }
   }
@@ -50,28 +52,25 @@ class Fuck {
           cube.y >= yRange.first &&
           cube.y <= yRange.last &&
           cube.z >= zRange.first &&
-          cube.z <= zRange.last) {
+          cube.z <= zRange.last &&
+          cube.w >= wRange.first &&
+          cube.w <= wRange.last) {
         var nghbrs = cubes
             .where((c) =>
                 c.isActive &&
                 (c.x - cube.x).abs() <= 1 &&
                 (c.y - cube.y).abs() <= 1 &&
-                (c.z - cube.z).abs() <= 1)
+                (c.z - cube.z).abs() <= 1 &&
+                (c.w - cube.w).abs() <= 1)
             .toList(growable: false);
         var neighbors = nghbrs.length;
         var newState =
             cube.isActive ? neighbors == 3 || neighbors == 4 : neighbors == 3;
 
-        newStateOfCubes.add(Cube(cube.x, cube.y, cube.z, newState));
+        newStateOfCubes.add(Cube(cube.x, cube.y, cube.z, cube.w, newState));
       } else {
         newStateOfCubes.add(cube);
       }
-
-      // if (cube.isActive != newState) {
-      //   print(
-      //       'State changed: [${cube.x}, ${cube.y}, ${cube.z}] -> ${newState ? '#' : '.'}');
-      //   stdin.readLineSync();
-      // }
     });
 
     cubes = newStateOfCubes;
@@ -81,23 +80,13 @@ class Fuck {
     var initData = line.split('');
     for (var x = 0; x < initData.length; x++) {
       if (initData[x] == '#') {
-        var foundCubes =
-            cubes.where((c) => c.x == x && c.y == y && c.z == 0).toList();
+        var foundCubes = cubes
+            .where((c) => c.x == x && c.y == y && c.z == 0 && c.w == 0)
+            .toList();
         if (foundCubes.isEmpty) {
-          cubes.add(Cube(x, y, 0, true));
+          cubes.add(Cube(x, y, 0, 0, true));
         } else {
           foundCubes.first.isActive = true;
-        }
-      }
-    }
-  }
-
-  void initCubes2(int size) {
-    var start = ((size / 2) * -1).round();
-    for (var x = start; x < size; x++) {
-      for (var y = start; y < size; y++) {
-        for (var z = start; z < size; z++) {
-          cubes.add(Cube(x, y, z, false));
         }
       }
     }
@@ -110,62 +99,36 @@ class Fuck {
     yRange.last++;
     zRange.first--;
     zRange.last++;
-    //wRange.first--;
-    //wRange.last++;
+    wRange.first--;
+    wRange.last++;
 
-    print('xRange: ${xRange}');
-    print('yRange: ${yRange}');
-    print('zRange: ${zRange}');
-    //print('wRange: ${wRange}');
+    // print('xRange: ${xRange}');
+    // print('yRange: ${yRange}');
+    // print('zRange: ${zRange}');
+    // print('wRange: ${wRange}');
   }
 
   void initCubes(int size) {
-    //var start = ((size / 2) * -1).round();
-    //print('initCubes Start: ${start}');
     for (var x = xRange.first - size; x <= xRange.last + size; x++) {
       for (var y = yRange.first - size; y <= yRange.last + size; y++) {
-        for (var z = yRange.first - size; z <= zRange.last + size; z++) {
-          // for (var w = start; w < size; w++) {
-          //   cubes.add(Cube(x, y, z, w, false));
-          // }
-          cubes.add(Cube(x, y, z, false));
+        for (var z = zRange.first - size; z <= zRange.last + size; z++) {
+          for (var w = wRange.first - size; w <= wRange.last + size; w++) {
+            cubes.add(Cube(x, y, z, w, false));
+          }
         }
       }
     }
   }
 
-  void printZLayer2(int z, int size) {
-    var start = ((size / 2) * -1).round();
-    for (var y = start; y < size; y++) {
-      var line = '';
-      for (var x = start; x < size; x++) {
-        try {
-          line +=
-              cubes.firstWhere((c) => c.x == x && c.y == y && c.z == z).isActive
-                  ? '#'
-                  : '.';
-        } catch (e) {
-          print(e);
-          print('No element at: x: ${x}, y: ${y}, z: ${z}');
-        }
-      }
-      print(line);
-    }
-  }
-
-  void printZLayer(int z) {
+  void printZLayer(int z, int w) {
     for (var y = yRange.first; y <= yRange.last; y++) {
       var line = '';
       for (var x = xRange.first; x <= xRange.last; x++) {
-        //try {
-        line +=
-            cubes.firstWhere((c) => c.x == x && c.y == y && c.z == z).isActive
-                ? '#'
-                : '.';
-        //} catch (e) {
-        //print(e);
-        //print('No element at: x: ${x}, y: ${y}, z: ${z}');
-        //}
+        line += cubes
+                .firstWhere((c) => c.x == x && c.y == y && c.z == z && c.w == w)
+                .isActive
+            ? '#'
+            : '.';
       }
       print(line);
     }
@@ -176,7 +139,8 @@ class Cube {
   int x;
   int y;
   int z;
+  int w;
   bool isActive;
 
-  Cube(this.x, this.y, this.z, this.isActive);
+  Cube(this.x, this.y, this.z, this.w, this.isActive);
 }
