@@ -7,6 +7,7 @@ Future<int> readInputFile(String path) async {
   final completer = Completer<int>();
   var inputStream = file.openRead();
   var tiles = <Tile>[];
+  var image = <Tile>[];
   Tile currentTile;
 
   inputStream.transform(utf8.decoder).transform(LineSplitter()).listen(
@@ -31,50 +32,48 @@ Future<int> readInputFile(String path) async {
 }
 
 int part1(List<Tile> tiles) {
-  tiles.forEach((tile) {
-    if (tile.id == 3079) {
-      print(tile);
-      print(
-          '---------------------------------++++++++++++++++++++++++++++++++');
-    }
-    tiles
-        .where((otherTile) =>
-            otherTile.id != tile.id && !tile.areMatched(otherTile))
-        .forEach((otherTile) {
-      var sides = Side.values;
-      for (var i = 0; i < sides.length; i++) {
-        if (tile.match(otherTile, sides[i])) {
-          print(
-              'It\'s a MATCH on the ${sides[i]}: ${tile.id} <3 ${otherTile.id}');
-          print(tile);
-          print(otherTile);
-          print('---------------------------------');
-          break;
-        }
-      }
-    });
-  });
+  findMatchingTiles(tiles, tiles[0]);
 
   var cornerIds = tiles
-      .where((t) => t.matchingTiles.length == 2)
+      .where((t) => t.matchedTiles.length == 2)
       .map((t) => t.id)
       .toList(growable: false);
 
   print(cornerIds);
 
-  tiles
-      // .where((t) => t.matchingTiles.length == 2)
-      .forEach((t) => print(t));
+  tiles.forEach((t) => print(t));
 
   return cornerIds.reduce((a, b) => a * b);
+}
+
+void findMatchingTiles(List<Tile> tiles, Tile tile) {
+  if (tile.matchedTiles.length == 4) {
+    return;
+  }
+  var sides = Side.values
+      .where((side) => !tile.matchedTiles.containsKey(side))
+      .toList(growable: false);
+  for (var i = 0; i < sides.length; i++) {
+    var found = false;
+    for (var j = 0; j < tiles.length && !found; j++) {
+      var otherTile = tiles[j];
+      if (otherTile.matchedTiles.isEmpty) {
+        found = tile.match(otherTile, sides[i]); //forgat
+      } else {
+        found = tile.hasMatch(otherTile, sides[i]); //forgatás nélkül
+      }
+      if (found) {
+        findMatchingTiles(tiles, otherTile);
+      }
+    }
+  }
 }
 
 class Tile {
   int id;
   var pixels = <String>[];
   Tile(this.id);
-  //var matchingTiles = <Side, int>{};
-  var matchingTiles = <int>[];
+  var matchedTiles = <Side, int>{};
 
   void flip() {
     pixels = pixels.reversed.toList(growable: false);
@@ -93,66 +92,56 @@ class Tile {
     pixels = retValue.map((e) => e.join()).toList(growable: false);
   }
 
-  bool areMatched(Tile otherTile) {
-    return matchingTiles.any((otherId) => otherId == otherTile.id);
-  }
-
   bool match(Tile otherTile, Side side) {
     if (hasMatch(otherTile, side)) {
       return true;
     }
-    otherTile.rotate();
-    if (hasMatch(otherTile, side)) {
-      return true;
-    }
-    otherTile.rotate();
-    if (hasMatch(otherTile, side)) {
-      return true;
-    }
-    otherTile.rotate();
-    if (hasMatch(otherTile, side)) {
-      return true;
+
+    for (var i = 0; i < 3; i++) {
+      otherTile.rotate();
+      if (hasMatch(otherTile, side)) {
+        return true;
+      }
     }
 
     otherTile.flip();
-    if (hasMatch(otherTile, side)) {
-      return true;
-    }
-    otherTile.rotate();
-    if (hasMatch(otherTile, side)) {
-      return true;
-    }
-    otherTile.rotate();
 
     if (hasMatch(otherTile, side)) {
       return true;
     }
-    otherTile.rotate();
-    if (hasMatch(otherTile, side)) {
-      return true;
-    }
 
+    for (var i = 0; i < 3; i++) {
+      otherTile.rotate();
+      if (hasMatch(otherTile, side)) {
+        return true;
+      }
+    }
     return false;
   }
 
   bool hasMatch(Tile otherTile, Side side) {
     var hasMatch = false;
+    Side otherSide;
     switch (side) {
       case Side.top:
         hasMatch = pixels.first == otherTile.pixels.last;
+        otherSide = Side.bottom;
         break;
       case Side.bottom:
         hasMatch = pixels.last == otherTile.pixels.first;
+        otherSide = Side.top;
         break;
       case Side.left:
         hasMatch = hasMatchLeft(otherTile);
+        otherSide = Side.right;
         break;
       case Side.right:
         hasMatch = hasMatchRight(otherTile);
+        otherSide = Side.left;
     }
     if (hasMatch) {
-      matchingTiles.add(otherTile.id);
-      otherTile.matchingTiles.add(id);
+      matchedTiles[side] = otherTile.id;
+      otherTile.matchedTiles[otherSide] = id;
     }
 
     return hasMatch;
@@ -187,7 +176,7 @@ class Tile {
 
   @override
   String toString() {
-    return '${id}: ${matchingTiles}';
+    return '${id}: ${matchedTiles}';
   }
 }
 
