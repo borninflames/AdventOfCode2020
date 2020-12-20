@@ -22,6 +22,7 @@ Future<int> readInputFile(String path) async {
       currentTile.pixels.add(line);
     }
   }, onDone: () {
+    tiles.add(currentTile);
     completer.complete(part1(tiles));
   }, onError: (e) {
     print(e.toString());
@@ -31,11 +32,14 @@ Future<int> readInputFile(String path) async {
 
 int part1(List<Tile> tiles) {
   tiles.forEach((tile) {
+    if (tile.id == 3079) {
+      print(tile);
+      print(
+          '---------------------------------++++++++++++++++++++++++++++++++');
+    }
     tiles
         .where((otherTile) =>
-            otherTile.id != tile.id &&
-            //!tile.areMatched(otherTile)
-            otherTile.matchingTiles.isEmpty)
+            otherTile.id != tile.id && !tile.areMatched(otherTile))
         .forEach((otherTile) {
       var sides = Side.values;
       for (var i = 0; i < sides.length; i++) {
@@ -69,7 +73,8 @@ class Tile {
   int id;
   var pixels = <String>[];
   Tile(this.id);
-  var matchingTiles = <Side, int>{};
+  //var matchingTiles = <Side, int>{};
+  var matchingTiles = <int>[];
 
   void flip() {
     pixels = pixels.reversed.toList(growable: false);
@@ -88,18 +93,8 @@ class Tile {
     pixels = retValue.map((e) => e.join()).toList(growable: false);
   }
 
-  void flipVertically() {
-    pixels = pixels.reversed.toList(growable: false);
-  }
-
-  void flipHorizontally() {
-    pixels = pixels
-        .map((row) => row.split('').reversed.join())
-        .toList(growable: false);
-  }
-
   bool areMatched(Tile otherTile) {
-    return matchingTiles.containsValue(otherTile.id);
+    return matchingTiles.any((otherId) => otherId == otherTile.id);
   }
 
   bool match(Tile otherTile, Side side) {
@@ -141,36 +136,26 @@ class Tile {
   }
 
   bool hasMatch(Tile otherTile, Side side) {
+    var hasMatch = false;
     switch (side) {
       case Side.top:
-        if (pixels.first == otherTile.pixels.last) {
-          matchingTiles[Side.top] = otherTile.id;
-          otherTile.matchingTiles[Side.bottom] = id;
-          return true;
-        }
+        hasMatch = pixels.first == otherTile.pixels.last;
         break;
       case Side.bottom:
-        if (pixels.last == otherTile.pixels.first) {
-          matchingTiles[Side.bottom] = otherTile.id;
-          otherTile.matchingTiles[Side.top] = id;
-          return true;
-        }
+        hasMatch = pixels.last == otherTile.pixels.first;
         break;
       case Side.left:
-        if (hasMatchLeft(otherTile)) {
-          matchingTiles[Side.left] = otherTile.id;
-          otherTile.matchingTiles[Side.right] = id;
-          return true;
-        }
+        hasMatch = hasMatchLeft(otherTile);
         break;
       case Side.right:
-        if (hasMatchRight(otherTile)) {
-          matchingTiles[Side.right] = otherTile.id;
-          otherTile.matchingTiles[Side.left] = id;
-          return true;
-        }
+        hasMatch = hasMatchRight(otherTile);
     }
-    return false;
+    if (hasMatch) {
+      matchingTiles.add(otherTile.id);
+      otherTile.matchingTiles.add(id);
+    }
+
+    return hasMatch;
   }
 
   bool hasMatchLeft(Tile otherTile) {
