@@ -7,7 +7,6 @@ Future<int> readInputFile(String path) async {
   final completer = Completer<int>();
   var inputStream = file.openRead();
   var tiles = <Tile>[];
-  var image = <Tile>[];
   Tile currentTile;
 
   inputStream.transform(utf8.decoder).transform(LineSplitter()).listen(
@@ -24,7 +23,13 @@ Future<int> readInputFile(String path) async {
     }
   }, onDone: () {
     tiles.add(currentTile);
-    completer.complete(part1(tiles));
+    var part1Answer = part1(tiles);
+    var image = constructImage(tiles);
+
+    image.forEach((row) {
+      print(row);
+    });
+    completer.complete(part1Answer);
   }, onError: (e) {
     print(e.toString());
   });
@@ -39,11 +44,16 @@ int part1(List<Tile> tiles) {
       .map((t) => t.id)
       .toList(growable: false);
 
-  print(cornerIds);
+  //print(cornerIds);
 
-  tiles.forEach((t) => print(t));
+  //tiles.forEach((t) => print(t));
 
   return cornerIds.reduce((a, b) => a * b);
+}
+
+int part2(List<Tile> tiles) {
+  constructImage(tiles);
+  return -666;
 }
 
 void findMatchingTiles(List<Tile> tiles, Tile tile) {
@@ -67,6 +77,54 @@ void findMatchingTiles(List<Tile> tiles, Tile tile) {
       }
     }
   }
+}
+
+List<String> constructImage(List<Tile> tiles) {
+  var image = <String>[];
+  var tile = tiles.firstWhere((t) =>
+      !t.matchedTiles.containsKey(Side.top) &&
+      !t.matchedTiles.containsKey(Side.left));
+
+  while (tile.matchedTiles.containsKey(Side.bottom)) {
+    var nextTile = tile;
+    var lines = <StringBuffer>[];
+    while (nextTile.matchedTiles.containsKey(Side.right)) {
+      var startI = 0;
+      var endI = nextTile.pixels.length;
+      var startChar = 0;
+      var endChar = nextTile.pixels[0].length;
+      if (nextTile.matchedTiles.containsKey(Side.top)) {
+        startI = 1;
+      }
+      if (nextTile.matchedTiles.containsKey(Side.bottom)) {
+        endI--;
+      }
+
+      if (nextTile.matchedTiles.containsKey(Side.left)) {
+        startChar = 1;
+      }
+      if (nextTile.matchedTiles.containsKey(Side.right)) {
+        endChar--;
+      }
+      for (var i = startI; i < endI; i++) {
+        var row = nextTile.pixels[i].substring(startChar, endChar);
+        if (lines.length == i - startI) {
+          lines.add(StringBuffer(row));
+        } else {
+          lines[i - startI].write(row);
+        }
+      }
+
+      nextTile =
+          tiles.firstWhere((t) => t.id == nextTile.matchedTiles[Side.right]);
+    }
+
+    image.addAll(lines.map((e) => e.toString()));
+
+    tile = tiles.firstWhere((t) => t.id == tile.matchedTiles[Side.bottom]);
+  }
+
+  return image;
 }
 
 class Tile {
