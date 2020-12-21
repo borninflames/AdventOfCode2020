@@ -24,12 +24,11 @@ Future<int> readInputFile(String path) async {
   }, onDone: () {
     tiles.add(currentTile);
     var part1Answer = part1(tiles);
-    var image = constructImage(tiles);
+    print('PART 1: ${part1Answer}');
 
-    image.forEach((row) {
-      print(row);
-    });
-    completer.complete(part1Answer);
+    var sum = part2(tiles);
+
+    completer.complete(sum);
   }, onError: (e) {
     print(e.toString());
   });
@@ -44,16 +43,89 @@ int part1(List<Tile> tiles) {
       .map((t) => t.id)
       .toList(growable: false);
 
-  //print(cornerIds);
-
-  //tiles.forEach((t) => print(t));
-
   return cornerIds.reduce((a, b) => a * b);
 }
 
 int part2(List<Tile> tiles) {
-  constructImage(tiles);
-  return -666;
+  var image = constructImage(tiles);
+  var picture = Tile(666);
+  picture.pixels = image;
+  picture.printPixels();
+  print(
+      '________________________________________________________________________');
+  picture.rotate(size: picture.pixels[0].length);
+  markSeamonsters(picture.pixels);
+  picture.printPixels();
+
+  var oneLine = picture.pixels.join();
+  var sum = '#'.allMatches(oneLine).length;
+  return sum;
+}
+
+void markSeamonsters(List<String> image) {
+  // image = <String>[
+  //   '______________________________________________________________________',
+  //   '_________________________..................#._________________________',
+  //   '_________________________#....##....##....###_________________________',
+  //   '_________________________.#..#..#..#..#..#..._________________________',
+  //   '______________________________________________________________________'
+  // ];
+  // image = <String>[
+  //   '..................#.',
+  //   '#....##....##....###',
+  //   '.#..#..#..#..#..#...'
+  // ];
+  var seamonster = <String>[
+    '..................#.',
+    '#....##....##....###',
+    '.#..#..#..#..#..#...'
+  ];
+  for (var row = 0; row < image.length - 2; row++) {
+    for (var col = 0; col < image[0].length - seamonster[0].length + 1; col++) {
+      var imagePart = <String>[];
+      var changedImagePart = <String>[];
+      for (var i = 0; i < seamonster.length; i++) {
+        imagePart
+            .add(image[row + i].substring(col, col + seamonster[i].length));
+        changedImagePart.add(imagePart.last);
+      }
+
+      // imagePart.forEach((element) {
+      //   print(element);
+      // });
+      // print('_____________________________________');
+
+      var foundSeamonster = true;
+      for (var i = 0; i < seamonster.length && foundSeamonster; i++) {
+        for (var j = 0; j < seamonster[i].length && foundSeamonster; j++) {
+          if (seamonster[i][j] == '#') {
+            if (imagePart[i][j] != '#') {
+              foundSeamonster = false;
+            } else {
+              changedImagePart[i] =
+                  changedImagePart[i].replaceFirst('#', 'O', j);
+            }
+          }
+        }
+      }
+
+      if (foundSeamonster) {
+        // changedImagePart.forEach((element) {
+        //   print(element);
+        // });
+        // print('_____________________________________');
+
+        for (var i = 0; i < imagePart.length; i++) {
+          image[row + i] =
+              image[row + i].replaceFirst(imagePart[i], changedImagePart[i]);
+        }
+      }
+    }
+  }
+
+  // image.forEach((element) {
+  //   print(element);
+  // });
 }
 
 void findMatchingTiles(List<Tile> tiles, Tile tile) {
@@ -81,48 +153,37 @@ void findMatchingTiles(List<Tile> tiles, Tile tile) {
 
 List<String> constructImage(List<Tile> tiles) {
   var image = <String>[];
-  var tile = tiles.firstWhere((t) =>
-      !t.matchedTiles.containsKey(Side.top) &&
-      !t.matchedTiles.containsKey(Side.left));
+  Tile tile;
 
-  while (tile.matchedTiles.containsKey(Side.bottom)) {
-    var nextTile = tile;
-    var lines = <StringBuffer>[];
-    while (nextTile.matchedTiles.containsKey(Side.right)) {
-      var startI = 0;
-      var endI = nextTile.pixels.length;
-      var startChar = 0;
-      var endChar = nextTile.pixels[0].length;
-      if (nextTile.matchedTiles.containsKey(Side.top)) {
-        startI = 1;
-      }
-      if (nextTile.matchedTiles.containsKey(Side.bottom)) {
-        endI--;
-      }
-
-      if (nextTile.matchedTiles.containsKey(Side.left)) {
-        startChar = 1;
-      }
-      if (nextTile.matchedTiles.containsKey(Side.right)) {
-        endChar--;
-      }
-      for (var i = startI; i < endI; i++) {
-        var row = nextTile.pixels[i].substring(startChar, endChar);
-        if (lines.length == i - startI) {
-          lines.add(StringBuffer(row));
-        } else {
-          lines[i - startI].write(row);
-        }
-      }
-
-      nextTile =
-          tiles.firstWhere((t) => t.id == nextTile.matchedTiles[Side.right]);
+  do {
+    if (tile == null) {
+      tile = tiles.firstWhere((t) =>
+          !t.matchedTiles.containsKey(Side.top) &&
+          !t.matchedTiles.containsKey(Side.left));
+    } else {
+      tile = tiles.firstWhere((t) => t.id == tile.matchedTiles[Side.bottom]);
     }
 
-    image.addAll(lines.map((e) => e.toString()));
+    var nextTile = tile;
+    var lines = <StringBuffer>[];
 
-    tile = tiles.firstWhere((t) => t.id == tile.matchedTiles[Side.bottom]);
-  }
+    do {
+      if (lines.isNotEmpty) {
+        nextTile =
+            tiles.firstWhere((t) => t.id == nextTile.matchedTiles[Side.right]);
+      }
+      for (var i = 1; i < nextTile.pixels.length - 1; i++) {
+        var row =
+            nextTile.pixels[i].substring(1, nextTile.pixels[i].length - 1);
+        if (lines.length == i - 1) {
+          lines.add(StringBuffer(row));
+        } else {
+          lines[i - 1].write(row);
+        }
+      }
+    } while (nextTile.matchedTiles.containsKey(Side.right));
+    image.addAll(lines.map((e) => e.toString()));
+  } while (tile.matchedTiles.containsKey(Side.bottom));
 
   return image;
 }
@@ -137,10 +198,9 @@ class Tile {
     pixels = pixels.reversed.toList(growable: false);
   }
 
-  void rotate() {
-    var size = 10;
+  void rotate({int size = 10}) {
     var matrix = pixels.map((e) => e.split('')).toList(growable: false);
-    var retValue = List<List<String>>.generate(10, (i) => List<String>(10));
+    var retValue = List<List<String>>.generate(size, (i) => List<String>(size));
     for (var row = 0; row < size; row++) {
       for (var index = 0; index < size; index++) {
         retValue[row][index] = matrix[size - index - 1][row];
