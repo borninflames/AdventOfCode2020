@@ -6,7 +6,7 @@ Future<int> readInputFile(String path) async {
   final file = File(path);
   final completer = Completer<int>();
   var inputStream = file.openRead();
-  var rules = List<Rule>(133);
+  var rules = List<Rule>(200);
   var section = 1;
   var messagesToCheck = <String>[];
 
@@ -23,8 +23,14 @@ Future<int> readInputFile(String path) async {
       }
     }
   }, onDone: () {
-    var validMessages = traverse(rules, 0, 0);
-    //print(validMessages);
+    var maxLength = 0;
+    messagesToCheck.forEach((e) {
+      if (e.length > maxLength) {
+        maxLength = e.length;
+      }
+    });
+    print('Max length of messages : ${maxLength}');
+    var validMessages = traverse(rules, 0, 0, messagesToCheck);
     completer.complete(countValidMessages(validMessages, messagesToCheck));
   }, onError: (e) {
     print(e.toString());
@@ -34,13 +40,22 @@ Future<int> readInputFile(String path) async {
 
 int countValidMessages(List<String> validMessages, List<String> messages) {
   print('Length : ${validMessages.length}');
+  var maxLength = 0;
+  validMessages.forEach((e) {
+    if (e.length > maxLength) {
+      maxLength = e.length;
+    }
+  });
+
+  print('Max length of valid messages : ${maxLength}');
 
   return validMessages
       .where((vMsg) => messages.any((msg) => vMsg == msg))
       .length;
 }
 
-List<String> traverse(List<Rule> rules, int i, int level) {
+List<String> traverse(
+    List<Rule> rules, int i, int level, List<String> messagesToCheck) {
   var rule = rules[i];
   rule.increaseUsed();
   if (rule.val.isNotEmpty) {
@@ -48,20 +63,12 @@ List<String> traverse(List<Rule> rules, int i, int level) {
   }
 
   var messages = <String>[];
-  for (var j = 0; j < rule.rules.length; j++) {
-    if ((rule.id == 8 || rule.id == 11) && rule.isDisabled && j == 1) {
-      break;
-    }
+  for (var j = 0; j < rule.rulesLength; j++) {
     var messagesToCombine = List<List<String>>(rule.rules[j].length);
 
-    for (var k = 0; j < rule.rules.length && k < rule.rules[j].length; k++) {
+    for (var k = 0; k < rule.rules[j].length; k++) {
       var r = rule.rules[j][k];
-      messagesToCombine[k] = traverse(rules, r, level + 1);
-      if ((rule.id == 8 || rule.id == 11) &&
-          rule.isDisabled &&
-          rule.rules.length > 1) {
-        rule.rules.removeLast();
-      }
+      messagesToCombine[k] = traverse(rules, r, level + 1, messagesToCheck);
     }
 
     var combinedMessages = <String>[];
@@ -70,20 +77,33 @@ List<String> traverse(List<Rule> rules, int i, int level) {
         messagesToCombine[1].forEach((rightMessage) {
           if (messagesToCombine.length > 2 && messagesToCombine[2] != null) {
             messagesToCombine[2].forEach((rightMessage2) {
-              combinedMessages.add(leftMessage + rightMessage + rightMessage2);
+              var msg = leftMessage + rightMessage + rightMessage2;
+              if (messagesToCheck.any((mtc) => mtc.contains(msg))) {
+                combinedMessages.add(msg);
+              }
             });
           } else {
-            combinedMessages.add(leftMessage + rightMessage);
+            var msg = leftMessage + rightMessage;
+            if (messagesToCheck.any((mtc) => mtc.contains(msg))) {
+              combinedMessages.add(msg);
+            }
           }
         });
       } else {
-        combinedMessages.add(leftMessage);
+        if (messagesToCheck.any((mtc) => mtc.contains(leftMessage))) {
+          combinedMessages.add(leftMessage);
+        }
       }
     });
+
+    if (combinedMessages.length > 1000) {
+      print('combined messages length: ${combinedMessages.length}');
+    }
 
     messages.addAll(combinedMessages);
   }
 
+  messages = messages.toSet().toList();
   return messages;
 }
 
@@ -91,17 +111,17 @@ class Rule {
   int id = -1;
   String val = '';
   var rules = <List<int>>[];
-  var isDisabled = false;
+  var rulesLength = 0;
   var usedTimes = 0;
 
   void increaseUsed() {
     usedTimes++;
-    if ((id == 8 || id == 11) && usedTimes >= 2) {
-      isDisabled = true;
-      print('Disabled rule: ${id}');
-    }
-    if (usedTimes > 10000) {
-      print('Rule ${id} has been used ${usedTimes} times...');
+    if (id == 8 || id == 11) {
+      print('${id} is used');
+      if (usedTimes >= 5) {
+        rulesLength = 1;
+        print('Disabled rule: ${id}');
+      }
     }
   }
 
@@ -130,6 +150,7 @@ Rule parseLine(String line) {
     var ruleParts = lineParts[1].split(' | ');
     for (var i = 0; i < ruleParts.length; i++) {
       rule.rules.add(ruleParts[i].split(' ').map((r) => int.parse(r)).toList());
+      rule.rulesLength = rule.rules.length;
     }
   }
 
