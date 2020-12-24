@@ -1,49 +1,98 @@
+import 'dart:collection';
+
 void main(List<String> arguments) async {
-  var game = CrabCups();
-  game.playGame(100);
+  var input = [5, 9, 8, 1, 6, 2, 7, 3, 4];
+  var game = CrabbyCupsGame(input, 1000000, 10000000);
+  print(game.playGame());
 }
 
-class CrabCups {
-  //var cups = [3, 2, 4, 1, 5];
-  //var cups = [3, 8, 9, 1, 2, 5, 4, 6, 7];
-  var cups = [5, 9, 8, 1, 6, 2, 7, 3, 4];
+class CrabbyCupsGame {
+  List<int> input;
+  int length;
+  int moves;
+  var cups = LinkedList<Cup>();
+  var cupVals = <int, Cup>{};
+  Cup current;
+  Cup destination;
 
-  int playGame(int moves) {
-    for (var i = 0; i < moves; i++) {
-      move();
-    }
-
-    return 0;
+  CrabbyCupsGame(this.input, this.length, this.moves) {
+    _initGame();
   }
 
-  void move() {
-    var pickUp = <int>[];
-    pickUp = cups.getRange(1, 4).toList();
-    cups.removeRange(1, 4);
-
-    var destNum = cups.first;
-    var destIndex = -1;
-    do {
-      destNum--;
-      destIndex = cups.indexOf(destNum);
-    } while (destIndex == -1 && destNum > 0);
-
-    if (destIndex == -1) {
-      destIndex = 0;
-      for (var i = 0; i < cups.length; i++) {
-        if (cups[i] > cups[destIndex]) {
-          destIndex = i;
-        }
+  int playGame() {
+    for (var i = 0; i < moves; i++) {
+      if ((i + 1) % 1000000 == 0) {
+        print('-- move ${i + 1} --');
       }
+      move(i + 1);
     }
 
-    //put it back
-    cups.insertAll(destIndex + 1, pickUp);
+    return cupVals[1].next.val * cupVals[1].next.next.val;
+  }
 
-    //shift
-    var curr = cups.removeAt(0);
-    cups.add(curr);
+  void move(int move) {
+    var oneGirl = current.next;
+    var twoCup = oneGirl.next;
+    var threePuke = twoCup.next;
 
-    print(cups);
+    threePuke.unlink();
+    twoCup.unlink();
+    oneGirl.unlink();
+
+    var destVal = current.val - 1;
+    while (destVal > 0) {
+      if (destVal != oneGirl.val &&
+          destVal != twoCup.val &&
+          destVal != threePuke.val) {
+        destination = cupVals[destVal];
+        break;
+      }
+      destVal--;
+    }
+
+    if (destVal == 0) {
+      destination = getMax();
+    }
+
+    destination.insertAfter(oneGirl);
+    oneGirl.insertAfter(twoCup);
+    twoCup.insertAfter(threePuke);
+
+    current = current.next;
+  }
+
+  void _initGame() {
+    cups.addAll(input.map((val) => Cup(val)));
+    for (var j = 10; j <= length; j++) {
+      cups.add(Cup(j));
+    }
+    cups.forEach((cup) {
+      cupVals[cup.val] = cup;
+    });
+    current = cups.first;
+  }
+
+  Cup getMax() {
+    var max = Cup(0);
+    cups.forEach((cup) {
+      if (max.val < cup.val) {
+        max = cup;
+      }
+    });
+    return max;
+  }
+}
+
+class Cup extends LinkedListEntry<Cup> {
+  int val;
+
+  Cup(this.val);
+
+  @override
+  Cup get next => super.next ?? super.list.first;
+
+  @override
+  String toString() {
+    return '${val}';
   }
 }
